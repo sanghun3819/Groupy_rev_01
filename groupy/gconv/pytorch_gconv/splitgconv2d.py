@@ -273,7 +273,7 @@ class SplitGConv2D_SFF(nn.Module):
 
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=0, bias=True, input_stabilizer_size=1, output_stabilizer_size=4):
-        super(SplitGConv2D_SF, self).__init__()
+        super(SplitGConv2D_SFF, self).__init__()
         assert (input_stabilizer_size, output_stabilizer_size) in make_indices_functions.keys()
         self.ksize = kernel_size
 
