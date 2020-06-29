@@ -793,7 +793,7 @@ class SplitGConv2D_EXPAND(nn.Module):
                     self.in_channels * self.input_stabilizer_size,
                     self.ksize, self.ksize)
         tw = tw.view(tw_shape)  # 512 512 3 3
-        print('tw size : ', tw.size())
+        #print('tw size : ', tw.size())
         tw_expand = tw_expand.view(tw_shape)  # 512 512 3 3
         tw_sf_0 = tw_expand.clone()
 
@@ -818,15 +818,15 @@ class SplitGConv2D_EXPAND(nn.Module):
         tw_sf_0[..., 2, 2] = a5
 
         tw_expand = tw_sf_0
-        print('tw expand size : ', tw_expand.size()) #512 512 3 3
+        #print('tw expand size : ', tw_expand.size()) #512 512 3 3
         tw_tot = torch.cat([tw, tw_expand], dim=1)
-        print('tw tot size : ', tw_tot.size()) # 512 1024 3 3
+        #print('tw tot size : ', tw_tot.size()) # 512 1024 3 3
 
         input_shape = input.size()  # batch 64 8 9 9
         input0 = input.clone()
 
         input_tot = torch.cat([input, input0], dim=2)
-        print('input size :', input_tot.size()) #batch 64 16 32 32
+        #print('input size :', input_tot.size()) #batch 64 16 32 32
         input_tot = input_tot.view(input_shape[0], self.in_channels * self.input_stabilizer_size*2, input_shape[-2],
                            input_shape[-1])
         # batch 1024 w h
