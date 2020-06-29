@@ -16,7 +16,7 @@ C3 = P4MConvP4M_SC(in_channels=64, out_channels=22, kernel_size=3, stride=1, pad
 C4 = P4MConvP4M_SC(in_channels=22, out_channels=45, kernel_size=3, stride=1, padding=1)
 C5 = P4MConvP4M_SCC(in_channels=45, out_channels=65, kernel_size=3, stride=1, padding=1)
 C6 = P4MConvP4M_SF(in_channels=65, out_channels=65, kernel_size=3, stride=1, padding=1)
-
+##########test
 # Create 10 images with 3 channels and 9x9 pixels:
 x = Variable(torch.randn(1, 3, 32, 32))
 #x = Variable(torch.zeros((10, 3, 9, 9)).int().random_(0,255))
