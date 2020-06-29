@@ -1,6 +1,6 @@
 import torch
 from torch.autograd import Variable
-from groupy.gconv.pytorch_gconv import P4ConvZ2, P4ConvP4, P4MConvZ2, P4MConvP4M, P4MConvP4M_SC,P4MConvP4M_SCC, P4MConvP4M_SF
+from groupy.gconv.pytorch_gconv import P4ConvZ2, P4ConvP4, P4MConvZ2, P4MConvP4M, P4MConvP4M_SC,P4MConvP4M_SCC, P4MConvP4M_SF, P4MConvP4M_SFF
 
 # Construct G-Conv layers
 #C1 = P4ConvZ2(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1)
@@ -9,6 +9,7 @@ from groupy.gconv.pytorch_gconv import P4ConvZ2, P4ConvP4, P4MConvZ2, P4MConvP4M
 P1 = P4MConvZ2(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1)
 P2 = P4MConvP4M_SCC(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
 P3 = P4MConvP4M_SCC(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+P3 = P4MConvP4M_SFF(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
 
 C1 = P4MConvZ2(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1)
 C2 = P4MConvP4M(in_channels=64, out_channels=64, kernel_size=3, stride=2, padding=1)

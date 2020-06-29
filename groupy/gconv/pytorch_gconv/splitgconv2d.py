@@ -268,6 +268,216 @@ class SplitGConv2D_SF(nn.Module):
 
         return y
 
+
+class SplitGConv2D_SFF(nn.Module):
+
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
+                 padding=0, bias=True, input_stabilizer_size=1, output_stabilizer_size=4):
+        super(SplitGConv2D_SF, self).__init__()
+        assert (input_stabilizer_size, output_stabilizer_size) in make_indices_functions.keys()
+        self.ksize = kernel_size
+
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+        padding = _pair(padding)
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.input_stabilizer_size = input_stabilizer_size
+        self.output_stabilizer_size = output_stabilizer_size
+
+        self.weight = Parameter(torch.Tensor(
+            out_channels, in_channels, self.input_stabilizer_size, *kernel_size))
+        print('SplitGConv2d_SFF init')
+        # self.weight1 = Parameter(torch.Tensor(
+        #     out_channels, in_channels, self.input_stabilizer_size, *kernel_size))
+        #print(torch.Tensor(
+        #    out_channels, in_channels, self.input_stabilizer_size, *kernel_size).size())
+        if bias:
+            self.bias = Parameter(torch.Tensor(out_channels))
+        else:
+            self.register_parameter('bias', None)
+        self.reset_parameters()
+
+        self.inds = self.make_transformation_indices()
+
+    def reset_parameters(self):
+        n = self.in_channels
+        for k in self.kernel_size:
+            n *= k
+        stdv = 1. / math.sqrt(n)
+        self.weight.data.uniform_(-stdv, stdv)
+        #self.weight1.data.uniform_(-stdv, stdv)
+        if self.bias is not None:
+            self.bias.data.uniform_(-stdv, stdv)
+
+    def make_transformation_indices(self):
+        return make_indices_functions[(self.input_stabilizer_size, self.output_stabilizer_size)](self.ksize)
+
+    def forward(self, input):
+        tw = trans_filter(self.weight, self.inds) #64 8 64 8 3 3
+        tw_shape = (self.out_channels * self.output_stabilizer_size,
+                    self.in_channels * self.input_stabilizer_size,
+                    self.ksize, self.ksize)
+        tw = tw.view(tw_shape) #512 512 3 3
+
+        # tw_sf = trans_filter(self.weight1, self.inds) #64 8 64 8 3 3
+        # tw_sf = tw_sf.view(tw_shape)
+
+        input_shape = input.size() # batch 64 8 9 9
+        input = input.view(input_shape[0], self.in_channels*self.input_stabilizer_size, input_shape[-2], input_shape[-1])
+        #batch 512 w h
+        # y1 = F.conv2d(input, weight=tw, bias=None, stride=self.stride,
+        #                 padding=self.padding, dilation=1)
+        # batch_size, _, ny_out, nx_out = y1.size()
+        # y1 = y1.view(batch_size, self.out_channels, self.output_stabilizer_size, ny_out, nx_out)
+        #print(y1.shape)
+
+        tw_sf_0 = tw.clone()
+        # tw_sf_1 = tw.clone()
+        # tw_sf_2 = tw.clone()
+        # # tw_sf_3 = tw.clone()
+        # tw_sf_4 = tw.clone()
+        # # tw_sf_5 = tw.clone()
+        # tw_sf_6 = tw.clone()
+
+        a0 = tw[..., 0, 0]
+        a1 = tw[..., 0, 1]
+        a2 = tw[..., 0, 2]
+        a3 = tw[..., 1, 0]
+        a4 = tw[..., 1, 1]
+        a5 = tw[..., 1, 2]
+        a6 = tw[..., 2, 0]
+        a7 = tw[..., 2, 1]
+        a8 = tw[..., 2, 2]
+
+        tw_sf_0[..., 0, 0] = a3
+        tw_sf_0[..., 1, 0] = a6
+        tw_sf_0[..., 2, 0] = a7
+        tw_sf_0[..., 0, 1] = a0
+        tw_sf_0[..., 1, 1] = a4
+        tw_sf_0[..., 2, 1] = a8
+        tw_sf_0[..., 0, 2] = a1
+        tw_sf_0[..., 1, 2] = a2
+        tw_sf_0[..., 2, 2] = a5
+
+        tw = tw_sf_0
+
+        # tw_sf_1[..., 0, 0] = a6
+        # tw_sf_1[..., 1, 0] = a7
+        # tw_sf_1[..., 2, 0] = a8
+        # tw_sf_1[..., 0, 1] = a3
+        # tw_sf_1[..., 1, 1] = a4
+        # tw_sf_1[..., 2, 1] = a5
+        # tw_sf_1[..., 0, 2] = a0
+        # tw_sf_1[..., 1, 2] = a1
+        # tw_sf_1[..., 2, 2] = a2
+
+        # tw_sf_2[..., 0, 0] = a7
+        # tw_sf_2[..., 1, 0] = a8
+        # tw_sf_2[..., 2, 0] = a5
+        # tw_sf_2[..., 0, 1] = a6
+        # tw_sf_2[..., 1, 1] = a4
+        # tw_sf_2[..., 2, 1] = a2
+        # tw_sf_2[..., 0, 2] = a3
+        # tw_sf_2[..., 1, 2] = a0
+        # tw_sf_2[..., 2, 2] = a1
+
+
+        # tw_sf_3[..., 0, 0] = a8
+        # tw_sf_3[..., 1, 0] = a5
+        # tw_sf_3[..., 2, 0] = a2
+        # tw_sf_3[..., 0, 1] = a7
+        # tw_sf_3[..., 1, 1] = a4
+        # tw_sf_3[..., 2, 1] = a1
+        # tw_sf_3[..., 0, 2] = a6
+        # tw_sf_3[..., 1, 2] = a3
+        # tw_sf_3[..., 2, 2] = a0
+
+        # tw_sf_4[..., 0, 0] = a5
+        # tw_sf_4[..., 1, 0] = a2
+        # tw_sf_4[..., 2, 0] = a1
+        # tw_sf_4[..., 0, 1] = a8
+        # tw_sf_4[..., 1, 1] = a4
+        # tw_sf_4[..., 2, 1] = a0
+        # tw_sf_4[..., 0, 2] = a7
+        # tw_sf_4[..., 1, 2] = a6
+        # tw_sf_4[..., 2, 2] = a3
+
+        # tw_sf_5[..., 0, 0] = a2
+        # tw_sf_5[..., 1, 0] = a1
+        # tw_sf_5[..., 2, 0] = a0
+        # tw_sf_5[..., 0, 1] = a5
+        # tw_sf_5[..., 1, 1] = a4
+        # tw_sf_5[..., 2, 1] = a3
+        # tw_sf_5[..., 0, 2] = a8
+        # tw_sf_5[..., 1, 2] = a7
+        # tw_sf_5[..., 2, 2] = a6
+
+        # tw_sf_6[..., 0, 0] = a1
+        # tw_sf_6[..., 1, 0] = a0
+        # tw_sf_6[..., 2, 0] = a3
+        # tw_sf_6[..., 0, 1] = a2
+        # tw_sf_6[..., 1, 1] = a4
+        # tw_sf_6[..., 2, 1] = a6
+        # tw_sf_6[..., 0, 2] = a5
+        # tw_sf_6[..., 1, 2] = a8
+        # tw_sf_6[..., 2, 2] = a7
+
+        y = F.conv2d(input, weight=tw, bias=None, stride=self.stride,
+                        padding=self.padding, dilation=1)
+        batch_size, _, ny_out, nx_out = y.size()
+        y = y.view(batch_size, self.out_channels, self.output_stabilizer_size, ny_out, nx_out)
+        #print(y2.shape)
+
+        # y3 = F.conv2d(input, weight=tw_sf_1, bias=None, stride=self.stride,
+        #               padding=self.padding, dilation=1)
+        # batch_size, _, ny_out, nx_out = y3.size()
+        # y3 = y3.view(batch_size, self.out_channels, self.output_stabilizer_size, ny_out, nx_out)
+
+        # y4 = F.conv2d(input, weight=tw_sf_2, bias=None, stride=self.stride,
+        #               padding=self.padding, dilation=1)
+        # batch_size, _, ny_out, nx_out = y4.size()
+        # y4 = y4.view(batch_size, self.out_channels, self.output_stabilizer_size, ny_out, nx_out)
+
+        # y5 = F.conv2d(input, weight=tw_sf_3, bias=None, stride=self.stride,
+        #               padding=self.padding, dilation=1)
+        # batch_size, _, ny_out, nx_out = y5.size()
+        # y5 = y5.view(batch_size, self.out_channels, self.output_stabilizer_size, ny_out, nx_out)
+
+        # y6 = F.conv2d(input, weight=tw_sf_4, bias=None, stride=self.stride,
+        #               padding=self.padding, dilation=1)
+        # batch_size, _, ny_out, nx_out = y6.size()
+        # y6 = y6.view(batch_size, self.out_channels, self.output_stabilizer_size, ny_out, nx_out)
+
+        # y7 = F.conv2d(input, weight=tw_sf_5, bias=None, stride=self.stride,
+        #               padding=self.padding, dilation=1)
+        # batch_size, _, ny_out, nx_out = y7.size()
+        # y7 = y7.view(batch_size, self.out_channels, self.output_stabilizer_size, ny_out, nx_out)
+
+        # y8 = F.conv2d(input, weight=tw_sf_6, bias=None, stride=self.stride,
+        #               padding=self.padding, dilation=1)
+        # batch_size, _, ny_out, nx_out = y8.size()
+        # y8 = y8.view(batch_size, self.out_channels, self.output_stabilizer_size, ny_out, nx_out)
+
+        # y_list = [y1, y2, y4, y6, y8]
+        # y_list = [y1, y2, y3, y4, y5, y6, y7, y8]
+        #y_list = [y1, y2]
+        #print('debug0', y1.shape, y2.shape, y3.shape)
+        #y = torch.cat((y1, y2, y3), dim=0)
+        #y = torch.mean(torch.stack(y_list), dim=0)
+        #print('debug1', y.shape)
+
+
+        if self.bias is not None:
+            bias = self.bias.view(1, self.out_channels, 1, 1, 1)
+            y = y + bias
+
+        return y
+
 class SplitGConv2D_SC(nn.Module):
 
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
@@ -563,6 +773,10 @@ class P4MConvP4M_SF(SplitGConv2D_SF):
     def __init__(self, *args, **kwargs):
         super(P4MConvP4M_SF, self).__init__(input_stabilizer_size=8, output_stabilizer_size=8, *args, **kwargs)
 
+class P4MConvP4M_SFF(SplitGConv2D_SFF):
+
+    def __init__(self, *args, **kwargs):
+        super(P4MConvP4M_SFF, self).__init__(input_stabilizer_size=8, output_stabilizer_size=8, *args, **kwargs)
 
 class P4MConvP4M_SCC(SplitGConv2D_SCC):
 
