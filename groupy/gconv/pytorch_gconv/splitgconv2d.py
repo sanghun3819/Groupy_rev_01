@@ -915,25 +915,25 @@ class SplitGConv2D_EXPANSION(nn.Module):
         a7 = tw[..., 2, 1]
         a8 = tw[..., 2, 2]
 
-        # tw_sf_0[..., 0, 0] = a3
-        # tw_sf_0[..., 1, 0] = a6
-        # tw_sf_0[..., 2, 0] = a7
-        # tw_sf_0[..., 0, 1] = a0
-        # tw_sf_0[..., 1, 1] = a4
-        # tw_sf_0[..., 2, 1] = a8
-        # tw_sf_0[..., 0, 2] = a1
-        # tw_sf_0[..., 1, 2] = a2
-        # tw_sf_0[..., 2, 2] = a5
-
-        tw_sf_0[..., 0, 0] = a7
-        tw_sf_0[..., 1, 0] = a8
-        tw_sf_0[..., 2, 0] = a5
-        tw_sf_0[..., 0, 1] = a6
+        tw_sf_0[..., 0, 0] = a3
+        tw_sf_0[..., 1, 0] = a6
+        tw_sf_0[..., 2, 0] = a7
+        tw_sf_0[..., 0, 1] = a0
         tw_sf_0[..., 1, 1] = a4
-        tw_sf_0[..., 2, 1] = a2
-        tw_sf_0[..., 0, 2] = a3
-        tw_sf_0[..., 1, 2] = a0
-        tw_sf_0[..., 2, 2] = a1
+        tw_sf_0[..., 2, 1] = a8
+        tw_sf_0[..., 0, 2] = a1
+        tw_sf_0[..., 1, 2] = a2
+        tw_sf_0[..., 2, 2] = a5
+
+        # tw_sf_0[..., 0, 0] = a7
+        # tw_sf_0[..., 1, 0] = a8
+        # tw_sf_0[..., 2, 0] = a5
+        # tw_sf_0[..., 0, 1] = a6
+        # tw_sf_0[..., 1, 1] = a4
+        # tw_sf_0[..., 2, 1] = a2
+        # tw_sf_0[..., 0, 2] = a3
+        # tw_sf_0[..., 1, 2] = a0
+        # tw_sf_0[..., 2, 2] = a1
 
         tw_expand = tw_sf_0
         #print('tw expand size : ', tw_expand.size()) #512 512 3 3
@@ -1089,6 +1089,131 @@ class SplitGConv2D_EXPANSIONS(nn.Module):
 
         return y
 
+class SplitGConv2D_EX(nn.Module):
+
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
+                 padding=0, bias=True, input_stabilizer_size=1, output_stabilizer_size=4):
+        super(SplitGConv2D_EX, self).__init__()
+        assert (input_stabilizer_size, output_stabilizer_size) in make_indices_functions.keys()
+        self.ksize = kernel_size
+
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+        padding = _pair(padding)
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.input_stabilizer_size = input_stabilizer_size
+        self.output_stabilizer_size = output_stabilizer_size
+
+        self.weight = Parameter(torch.Tensor(
+            out_channels, in_channels, self.input_stabilizer_size, *kernel_size))
+        self.weight1 = Parameter(torch.Tensor(
+            out_channels, in_channels, self.input_stabilizer_size, *kernel_size))
+
+        if bias:
+            self.bias = Parameter(torch.Tensor(out_channels))
+        else:
+            self.register_parameter('bias', None)
+        self.reset_parameters()
+
+        self.inds = self.make_transformation_indices()
+
+    def reset_parameters(self):
+        n = self.in_channels
+        for k in self.kernel_size:
+            n *= k
+        stdv = 1. / math.sqrt(n)
+        self.weight.data.uniform_(-stdv, stdv)
+        self.weight1.data.uniform_(-stdv, stdv)
+        if self.bias is not None:
+            self.bias.data.uniform_(-stdv, stdv)
+
+    def make_transformation_indices(self):
+        return make_indices_functions[(self.input_stabilizer_size, self.output_stabilizer_size)](self.ksize)
+
+    def forward(self, input):
+        tw = trans_filter(self.weight, self.inds)  # 64 8 64 8 3 3
+        tw_expand = trans_filter(self.weight1, self.inds)  # 64 8 64 8 3 3
+        tw_shape = (self.out_channels * self.output_stabilizer_size,
+                    self.in_channels * self.input_stabilizer_size,
+                    self.ksize, self.ksize)
+        tw = tw.view(tw_shape)  # 512 512 3 3
+        #print('tw size : ', tw.size())
+        tw_expand = tw_expand.view(tw_shape)  # 512 512 3 3
+
+        tw_sf_0 = tw_expand.clone()
+
+        a0 = tw[..., 0, 0]
+        a1 = tw[..., 0, 1]
+        a2 = tw[..., 0, 2]
+        a3 = tw[..., 1, 0]
+        a4 = tw[..., 1, 1]
+        a5 = tw[..., 1, 2]
+        a6 = tw[..., 2, 0]
+        a7 = tw[..., 2, 1]
+        a8 = tw[..., 2, 2]
+
+        tw_sf_0[..., 0, 0] = a3
+        tw_sf_0[..., 1, 0] = a6
+        tw_sf_0[..., 2, 0] = a7
+        tw_sf_0[..., 0, 1] = a0
+        tw_sf_0[..., 1, 1] = a4
+        tw_sf_0[..., 2, 1] = a8
+        tw_sf_0[..., 0, 2] = a1
+        tw_sf_0[..., 1, 2] = a2
+        tw_sf_0[..., 2, 2] = a5
+
+        # tw_sf_0[..., 0, 0] = a7
+        # tw_sf_0[..., 1, 0] = a8
+        # tw_sf_0[..., 2, 0] = a5
+        # tw_sf_0[..., 0, 1] = a6
+        # tw_sf_0[..., 1, 1] = a4
+        # tw_sf_0[..., 2, 1] = a2
+        # tw_sf_0[..., 0, 2] = a3
+        # tw_sf_0[..., 1, 2] = a0
+        # tw_sf_0[..., 2, 2] = a1
+
+        tw_expand = tw_sf_0
+        #print('tw expand size : ', tw_expand.size()) #512 512 3 3
+        tw_tot = torch.cat([tw, tw_expand], dim=1) # for input 512 1024 3 3
+        tw_tot1 = torch.cat([tw_tot, tw_tot], dim=0) # for output 1024 1024 3 3
+        #print('tw tot size : ', tw_tot.size()) # 512 1024 3 3
+
+        input_shape = input.size()  # batch 64 8 9 9
+        #input0 = input.clone()
+
+        #input_tot = torch.cat([input, input0], dim=2)
+        #print('input size :', input_tot.size()) #batch 64 16 32 32
+        input = input.view(input_shape[0], self.in_channels * self.input_stabilizer_size*2, input_shape[-2],
+                           input_shape[-1])
+        # batch 1024 w h
+        #print('p8m input : ', input.size())
+
+        y = F.conv2d(input, weight=tw_tot1, bias=None, stride=self.stride,
+                       padding=self.padding, dilation=1)
+        # y1 = F.conv2d(input, weight=tw_tot, bias=None, stride=self.stride,
+        #               padding=self.padding, dilation=1)
+        #
+        # y2 = F.conv2d(input, weight=tw_tot1, bias=None, stride=self.stride,
+        #                padding=self.padding, dilation=1)
+        # print('y1', y1.shape)
+
+        # y= torch.cat([y1, y2], dim=1)
+        batch_size, _, ny_out, nx_out = y.size()
+        #print(y1.size())
+        y = y.view(batch_size, self.out_channels, self.output_stabilizer_size*2, ny_out, nx_out)
+        # print('y1', y1.shape)
+
+        if self.bias is not None:
+            bias = self.bias.view(1, self.out_channels, 1, 1, 1)
+            y = y + bias
+
+        return y
+
 class P4ConvZ2(SplitGConv2D):
 
     def __init__(self, *args, **kwargs):
@@ -1116,6 +1241,10 @@ class P8MConvP8M(SplitGConv2D_EXPANSIONS):
     def __init__(self, *args, **kwargs):
         super(P8MConvP8M, self).__init__(input_stabilizer_size=8, output_stabilizer_size=8, *args, **kwargs)
 
+class P8MConvP8M_EX(SplitGConv2D_EX):
+
+    def __init__(self, *args, **kwargs):
+        super(P8MConvP8M_EX, self).__init__(input_stabilizer_size=8, output_stabilizer_size=8, *args, **kwargs)
 
 class P4MConvP4M(SplitGConv2D):
 

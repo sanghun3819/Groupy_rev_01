@@ -1,15 +1,21 @@
 import torch
 from torch.autograd import Variable
-from groupy.gconv.pytorch_gconv import P4ConvZ2, P4ConvP4, P4MConvZ2, P4MConvP4M, P4MConvP4M_SC,P4MConvP4M_SCC, P4MConvP4M_SF, P4MConvP4M_SFF
-
+from groupy.gconv.pytorch_gconv import P4ConvZ2, P4ConvP4, P4MConvZ2, P4MConvP4M, P4MConvP4M_SC,P4MConvP4M_SCC, P4MConvP4M_SF, P4MConvP4M_SFF, P4MConvP4M_EXPAND, P8MConvZ2, P8MConvP8M, P8MConvP8M_EX
 # Construct G-Conv layers
 #C1 = P4ConvZ2(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1)
 #C2 = P4ConvP4(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
 
-P1 = P4MConvZ2(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1)
-P2 = P4MConvP4M_SCC(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
-P3 = P4MConvP4M_SCC(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
-P3 = P4MConvP4M_SFF(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+P1 = P8MConvZ2(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1)
+P2 = P8MConvP8M(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+P3 = P8MConvP8M_EX(in_channels=64, out_channels=118, kernel_size=3, stride=1, padding=1)
+
+P7 = P4MConvP4M_SCC(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+P4 = P4MConvP4M_SCC(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+P5 = P4MConvP4M_SFF(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+
+P5 = P4MConvP4M_SFF(in_channels=64, out_channels=118, kernel_size=3, stride=1, padding=1)
+
+P6 = P4MConvP4M_EXPAND(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
 
 C1 = P4MConvZ2(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1)
 C2 = P4MConvP4M(in_channels=64, out_channels=64, kernel_size=3, stride=2, padding=1)
@@ -24,7 +30,7 @@ x = Variable(torch.randn(1, 3, 32, 32))
 #x = Variable(torch.zeros((10, 3, 9, 9)).int().random_(0,255))
 # fprop
 #y = C1(x)
-#print(y.data.shape)  # (10, 64, 4, 9, 9)
+#print(y.data.shape)  # (10, 64, 4, 9, 95
 #y = C2(y)
 #print(y.data.shape)  # (10, 64, 4, 9, 9)
 #y = C3(y)
@@ -33,12 +39,17 @@ x = Variable(torch.randn(1, 3, 32, 32))
 #print(y.data.shape)  # (10, 64, 4, 9, 9)
 
 z = P1(x)
-print(z.data.shape)  # (10, 64, 8, 9, 9)
+print('main', z.data.shape)  # (10, 64, 8, 9, 9)
 z = P2(z)
-#print(z.data.shape)  # (10, 64, 8, 9, 9)
-print('HERE!!!!!!!!!!!!!!!!!!!')  # (10, 64, 8, 9, 9)
+print(z.data.shape)  # (10, 64, 8, 9, 9)
 z = P3(z)
 print(z.data.shape)  # (10, 64, 8, 9, 9)
+# z = P5(z)
+# print(z.data.shape)  # (10, 64, 8, 9, 9)
+
+# print('HERE!!!!!!!!!!!!!!!!!!!')  # (10, 64, 8, 9, 9)
+# z = P4(z)
+# print(z.data.shape)  # (10, 64, 8, 9, 9)
 #y = C2(C1(x))
 #print(y.data.shape)  # (10, 64, 4, 9, 9)
 #print(x[0][0])
