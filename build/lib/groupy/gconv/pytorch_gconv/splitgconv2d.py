@@ -1113,6 +1113,10 @@ class SplitGConv2D_EX(nn.Module):
             out_channels, in_channels, self.input_stabilizer_size, *kernel_size))
         self.weight1 = Parameter(torch.Tensor(
             out_channels, in_channels, self.input_stabilizer_size, *kernel_size))
+        self.weight2 = Parameter(torch.Tensor(
+            out_channels, in_channels, self.input_stabilizer_size, *kernel_size))
+        self.weight3 = Parameter(torch.Tensor(
+            out_channels, in_channels, self.input_stabilizer_size, *kernel_size))
 
         if bias:
             self.bias = Parameter(torch.Tensor(out_channels))
@@ -1129,6 +1133,8 @@ class SplitGConv2D_EX(nn.Module):
         stdv = 1. / math.sqrt(n)
         self.weight.data.uniform_(-stdv, stdv)
         self.weight1.data.uniform_(-stdv, stdv)
+        self.weight2.data.uniform_(-stdv, stdv)
+        self.weight3.data.uniform_(-stdv, stdv)
         if self.bias is not None:
             self.bias.data.uniform_(-stdv, stdv)
 
@@ -1138,14 +1144,20 @@ class SplitGConv2D_EX(nn.Module):
     def forward(self, input):
         tw = trans_filter(self.weight, self.inds)  # 64 8 64 8 3 3
         tw_expand = trans_filter(self.weight1, self.inds)  # 64 8 64 8 3 3
+        tw_o = trans_filter(self.weight2, self.inds)  # 64 8 64 8 3 3
+        tw_expand_o = trans_filter(self.weight3, self.inds)  # 64 8 64 8 3 3
+
         tw_shape = (self.out_channels * self.output_stabilizer_size,
                     self.in_channels * self.input_stabilizer_size,
                     self.ksize, self.ksize)
+
         tw = tw.view(tw_shape)  # 512 512 3 3
-        #print('tw size : ', tw.size())
         tw_expand = tw_expand.view(tw_shape)  # 512 512 3 3
+        tw_o = tw_o.view(tw_shape)  # 512 512 3 3
+        tw_expand_o = tw_expand_o.view(tw_shape)  # 512 512 3 3
 
         tw_sf_0 = tw_expand.clone()
+        tw_sf_1 = tw_expand_o.clone()
 
         a0 = tw[..., 0, 0]
         a1 = tw[..., 0, 1]
@@ -1157,6 +1169,16 @@ class SplitGConv2D_EX(nn.Module):
         a7 = tw[..., 2, 1]
         a8 = tw[..., 2, 2]
 
+        b0 = tw_o[..., 0, 0]
+        b1 = tw_o[..., 0, 1]
+        b2 = tw_o[..., 0, 2]
+        b3 = tw_o[..., 1, 0]
+        b4 = tw_o[..., 1, 1]
+        b5 = tw_o[..., 1, 2]
+        b6 = tw_o[..., 2, 0]
+        b7 = tw_o[..., 2, 1]
+        b8 = tw_o[..., 2, 2]
+
         tw_sf_0[..., 0, 0] = a3
         tw_sf_0[..., 1, 0] = a6
         tw_sf_0[..., 2, 0] = a7
@@ -1166,6 +1188,16 @@ class SplitGConv2D_EX(nn.Module):
         tw_sf_0[..., 0, 2] = a1
         tw_sf_0[..., 1, 2] = a2
         tw_sf_0[..., 2, 2] = a5
+
+        tw_sf_1[..., 0, 0] = b3
+        tw_sf_1[..., 1, 0] = b6
+        tw_sf_1[..., 2, 0] = b7
+        tw_sf_1[..., 0, 1] = b0
+        tw_sf_1[..., 1, 1] = b4
+        tw_sf_1[..., 2, 1] = b8
+        tw_sf_1[..., 0, 2] = b1
+        tw_sf_1[..., 1, 2] = b2
+        tw_sf_1[..., 2, 2] = b5
 
         # tw_sf_0[..., 0, 0] = a7
         # tw_sf_0[..., 1, 0] = a8
@@ -1178,11 +1210,14 @@ class SplitGConv2D_EX(nn.Module):
         # tw_sf_0[..., 2, 2] = a1
 
         tw_expand = tw_sf_0
+        tw_expand_o = tw_sf_1
+
         #print('tw expand size : ', tw_expand.size()) #512 512 3 3
-        tw_tot = torch.cat([tw, tw_expand], dim=1) # for input 512 1024 3 3
-        tw_tot1 = torch.cat([tw_tot, tw_tot], dim=0) # for output 1024 1024 3 3
+        tw_tot1 = torch.cat([tw, tw_expand], dim=1) # for input 512 1024 3 3
+        tw_tot2 = torch.cat([tw_o, tw_expand_o], dim=1) # for output 512 1024 1024 3 3
         #print('tw tot size : ', tw_tot.size()) # 512 1024 3 3
 
+        tw_tot = torch.cat([tw_tot1, tw_tot2], dim=0)
         input_shape = input.size()  # batch 64 8 9 9
         #input0 = input.clone()
 
@@ -1193,7 +1228,7 @@ class SplitGConv2D_EX(nn.Module):
         # batch 1024 w h
         #print('p8m input : ', input.size())
 
-        y = F.conv2d(input, weight=tw_tot1, bias=None, stride=self.stride,
+        y = F.conv2d(input, weight=tw_tot, bias=None, stride=self.stride,
                        padding=self.padding, dilation=1)
         # y1 = F.conv2d(input, weight=tw_tot, bias=None, stride=self.stride,
         #               padding=self.padding, dilation=1)
