@@ -885,8 +885,10 @@ class SplitGConv2D_EXPANSION(nn.Module):
         for k in self.kernel_size:
             n *= k
         stdv = 1. / math.sqrt(n)
-        self.weight.data.uniform_(-stdv, stdv)
-        self.weight1.data.uniform_(-stdv, stdv)
+        # self.weight.data.uniform_(-stdv, stdv)
+        # self.weight1.data.uniform_(-stdv, stdv)
+        torch.nn.init.kaiming_normal_(self.weight, a=0, mode='fan_in', nonlinearity='relu')
+        torch.nn.init.kaiming_normal_(self.weight1, a=0, mode='fan_in', nonlinearity='relu')
         if self.bias is not None:
             self.bias.data.uniform_(-stdv, stdv)
 
@@ -1131,10 +1133,15 @@ class SplitGConv2D_EX(nn.Module):
         for k in self.kernel_size:
             n *= k
         stdv = 1. / math.sqrt(n)
-        self.weight.data.uniform_(-stdv, stdv)
-        self.weight1.data.uniform_(-stdv, stdv)
-        self.weight2.data.uniform_(-stdv, stdv)
-        self.weight3.data.uniform_(-stdv, stdv)
+        # self.weight.data.uniform_(-stdv, stdv)
+        # self.weight1.data.uniform_(-stdv, stdv)
+        # self.weight2.data.uniform_(-stdv, stdv)
+        # self.weight3.data.uniform_(-stdv, stdv)
+        torch.nn.init.kaiming_normal_(self.weight, a=0, mode='fan_in', nonlinearity='relu')
+        torch.nn.init.kaiming_normal_(self.weight1, a=0, mode='fan_in', nonlinearity='relu')
+        torch.nn.init.kaiming_normal_(self.weight2, a=0, mode='fan_in', nonlinearity='relu')
+        torch.nn.init.kaiming_normal_(self.weight3, a=0, mode='fan_in', nonlinearity='relu')
+
         if self.bias is not None:
             self.bias.data.uniform_(-stdv, stdv)
 
