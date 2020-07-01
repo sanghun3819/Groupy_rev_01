@@ -8,10 +8,10 @@ from groupy.gconv.pytorch_gconv import P4ConvZ2, P4ConvP4, P4MConvZ2, P4MConvP4M
 P1 = P8MConvZ2(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1)
 P2 = P8MConvP8M(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
 P3 = P8MConvP8M_EX(in_channels=64, out_channels=118, kernel_size=3, stride=1, padding=1)
-
-P7 = P4MConvP4M_SCC(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
-P4 = P4MConvP4M_SCC(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
-P5 = P4MConvP4M_SFF(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+P4 = P8MConvP8M_EX(in_channels=118, out_channels=191, kernel_size=1, stride=1, padding=0)
+P5 = P4MConvP4M_SCC(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+P6 = P4MConvP4M_SCC(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+P7 = P4MConvP4M_SFF(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
 
 P5 = P4MConvP4M_SFF(in_channels=64, out_channels=118, kernel_size=3, stride=1, padding=1)
 
@@ -44,8 +44,8 @@ z = P2(z)
 print(z.data.shape)  # (10, 64, 8, 9, 9)
 z = P3(z)
 print(z.data.shape)  # (10, 64, 8, 9, 9)
-# z = P5(z)
-# print(z.data.shape)  # (10, 64, 8, 9, 9)
+z = P4(z)
+print(z.data.shape)  # (10, 64, 8, 9, 9)
 
 # print('HERE!!!!!!!!!!!!!!!!!!!')  # (10, 64, 8, 9, 9)
 # z = P4(z)
